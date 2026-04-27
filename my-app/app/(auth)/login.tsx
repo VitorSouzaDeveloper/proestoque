@@ -22,7 +22,7 @@ export default function LoginScreen() {
   const [senha, setSenha] = useState('');
 
   const handleLogin = () => {
-    router.replace('/(tabs)/index' as never);
+    router.replace('/(tabs)' as never);
   };
 
   return (
