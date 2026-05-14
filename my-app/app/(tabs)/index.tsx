@@ -13,22 +13,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius, shadows } from '@/src/constants/theme';
 import {
   PRODUTOS_MOCK,
-  USUARIO_MOCK,
   Produto,
   getStatusEstoque,
   StatusEstoque,
 } from '@/src/data/mockData';
+import { useAuth } from '@/src/contexts/AuthContext';
 
 // ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
 
-function getDataHoje(): string {
-  return new Date().toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
+function getSaudacao(): string {
+  const hora = new Date().getHours();
+  if (hora < 12) return 'Bom dia';
+  if (hora < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+function getEmoji(): string {
+  const hora = new Date().getHours();
+  if (hora < 12) return '☀️';
+  if (hora < 18) return '🔥';
+  return '🌙';
 }
 
 function calcularValorTotal(produtos: Produto[]): number {
@@ -101,6 +107,7 @@ function ProdutoItem({ item }: ProdutoItemProps) {
 // ─────────────────────────────────────────────
 
 export default function HomeScreen() {
+  const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [produtos, setProdutos] = useState(PRODUTOS_MOCK);
 
@@ -124,27 +131,29 @@ export default function HomeScreen() {
     { label: 'Alertas', valor: alertas.length, emoji: '⚠️', bg: colors.warningLight },
     { label: 'Categorias', valor: categorias, emoji: '🗂️', bg: colors.surfaceAlt },
     {
-      label: 'Em Estoque',
-      valor: `R$ ${valorTotal.toFixed(0)}`,
+      label: 'Valor',
+      valor: `R$${valorTotal.toFixed(0)}`,
       emoji: '💰',
       bg: colors.successLight,
     },
   ];
 
+  // Inicial do nome para o avatar
+  const inicial = user?.nome?.charAt(0).toUpperCase() || '?';
+
   const ListHeader = (
     <View>
-      {/* Saudação */}
+      {/* Saudação + Avatar */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={styles.saudacao}>
-            Olá, {USUARIO_MOCK.nome} 👋
+            {getSaudacao()}, {user?.nome || 'Usuário'} {getEmoji()}
           </Text>
-          <Text style={styles.dataHoje}>{getDataHoje()}</Text>
           <Text style={styles.subtitulo}>Visão geral do estoque</Text>
         </View>
-        <TouchableOpacity style={styles.addBtn} activeOpacity={0.8}>
-          <Ionicons name="add" size={24} color={colors.textOnPrimary} />
-        </TouchableOpacity>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{inicial}</Text>
+        </View>
       </View>
 
       {/* Cards de resumo */}
@@ -222,22 +231,19 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: spacing.base,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
     backgroundColor: colors.surface,
   },
+  headerLeft: {
+    flex: 1,
+  },
   saudacao: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
     color: colors.textPrimary,
-  },
-  dataHoje: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: 2,
-    textTransform: 'capitalize',
   },
   subtitulo: {
     fontSize: typography.fontSize.sm,
@@ -245,14 +251,22 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.semiBold,
     marginTop: 4,
   },
-  addBtn: {
+
+  // Avatar
+  avatar: {
     width: 44,
     height: 44,
-    borderRadius: borderRadius.full,
+    borderRadius: 22,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: spacing.md,
     ...shadows.md,
+  },
+  avatarText: {
+    color: colors.textOnPrimary,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
   },
 
   // Cards grid

@@ -14,7 +14,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Input } from '@/src/components/Input';
 import { Button } from '@/src/components/Button';
-import { LogoProEstoque } from '@/src/components/LogoProEstoque';
 import { colors, typography, spacing, borderRadius } from '@/src/constants/theme';
 
 type TelaEstado = 'formulario' | 'sucesso';
@@ -56,7 +55,9 @@ export default function RecuperarSenhaScreen() {
 
           {/* Logo */}
           <View style={styles.logoArea}>
-            <LogoProEstoque size="sm" />
+            <View style={styles.logoIcon}>
+              <Ionicons name="cube-outline" size={28} color={colors.textOnPrimary} />
+            </View>
           </View>
 
           {tela === 'formulario' ? (
@@ -156,6 +157,19 @@ const styles = StyleSheet.create({
   logoArea: {
     alignItems: 'center',
     marginBottom: spacing.xl,
+  },
+  logoIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
   },
   card: {
     backgroundColor: colors.surface,

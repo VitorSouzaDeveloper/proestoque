@@ -11,18 +11,23 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
 import { Input } from '@/src/components/Input';
 import { Button } from '@/src/components/Button';
-import { LogoProEstoque } from '@/src/components/LogoProEstoque';
-import { colors, typography, spacing } from '@/src/constants/theme';
+import { colors, typography, spacing, borderRadius } from '@/src/constants/theme';
+import { useAuth } from '@/src/contexts/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
 
-  const handleLogin = () => {
-    router.replace('/(tabs)' as never);
+  const handleLogin = async () => {
+    if (!email || !senha) return;
+    // Chama o login do contexto — o redirecionamento para o dashboard
+    // acontece automaticamente pelo NavigationGuard
+    await login(email, senha);
   };
 
   return (
@@ -39,7 +44,10 @@ export default function LoginScreen() {
         >
           {/* Logo */}
           <View style={styles.logoArea}>
-            <LogoProEstoque size="md" />
+            <View style={styles.logoIcon}>
+              <Ionicons name="cube-outline" size={38} color={colors.textOnPrimary} />
+            </View>
+            <Text style={styles.logoTitle}>ProEstoque</Text>
           </View>
 
           {/* Form */}
@@ -77,6 +85,8 @@ export default function LoginScreen() {
               fullWidth
               size="lg"
               onPress={handleLogin}
+              loading={isLoading}
+              disabled={!email || !senha}
               style={styles.btnEntrar}
             />
 
@@ -87,7 +97,7 @@ export default function LoginScreen() {
             >
               <Text style={styles.signupText}>
                 Não tem conta?{' '}
-                <Text style={styles.signupBold}>Cadastrar</Text>
+                <Text style={styles.signupBold}>Criar conta</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -114,6 +124,26 @@ const styles = StyleSheet.create({
   logoArea: {
     alignItems: 'center',
     marginBottom: spacing['3xl'],
+  },
+  logoIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  logoTitle: {
+    fontSize: typography.fontSize['2xl'],
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: -0.5,
+    marginTop: spacing.md,
   },
   card: {
     backgroundColor: colors.surface,

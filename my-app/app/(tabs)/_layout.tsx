@@ -56,18 +56,13 @@ export default function TabLayout() {
         name="configuracoes"
         options={{
           title: 'Config',
-          headerTitle: 'Configurações',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" color={color} size={size} />
           ),
         }}
       />
 
-      {/* Esconde rotas legadas que não fazem parte do ProEstoque */}
-      <Tabs.Screen name="explore" options={{ href: null }} />
-      <Tabs.Screen name="nova" options={{ href: null }} />
-      <Tabs.Screen name="sobre" options={{ href: null }} />
-      <Tabs.Screen name="tarefa/[id]" options={{ href: null }} />
     </Tabs>
   );
 }
