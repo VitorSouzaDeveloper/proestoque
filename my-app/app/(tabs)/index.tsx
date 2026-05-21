@@ -12,12 +12,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius, shadows } from '@/src/constants/theme';
 import {
-  PRODUTOS_MOCK,
   Produto,
   getStatusEstoque,
   StatusEstoque,
 } from '@/src/data/mockData';
 import { useAuth } from '@/src/contexts/AuthContext';
+import { useProducts } from '@/src/contexts/ProductsContext';
+import { useRouter } from 'expo-router';
+import { Image } from 'react-native';
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -28,21 +30,6 @@ function getSaudacao(): string {
   if (hora < 12) return 'Bom dia';
   if (hora < 18) return 'Boa tarde';
   return 'Boa noite';
-}
-
-function getEmoji(): string {
-  const hora = new Date().getHours();
-  if (hora < 12) return '☀️';
-  if (hora < 18) return '🔥';
-  return '🌙';
-}
-
-function calcularValorTotal(produtos: Produto[]): number {
-  return produtos.reduce((acc, p) => acc + p.quantidade * p.preco, 0);
-}
-
-function getCategoriasUnicas(produtos: Produto[]): number {
-  return new Set(produtos.map((p) => p.categoria)).size;
 }
 
 // ─────────────────────────────────────────────
@@ -86,19 +73,26 @@ function CardResumoItem({ label, valor, emoji, bg }: CardResumoItemProps) {
 
 interface ProdutoItemProps {
   item: Produto;
+  onPress: () => void;
 }
 
-function ProdutoItem({ item }: ProdutoItemProps) {
+function ProdutoItem({ item, onPress }: ProdutoItemProps) {
   const status = getStatusEstoque(item);
   return (
-    <View style={styles.produtoItem}>
-      <Text style={styles.produtoEmoji}>{item.emoji}</Text>
+    <TouchableOpacity style={styles.produtoItem} onPress={onPress} activeOpacity={0.7}>
+      {item.foto ? (
+        <Image source={{ uri: item.foto }} style={styles.produtoThumbnail} />
+      ) : (
+        <View style={styles.emojiContainer}>
+          <Text style={styles.produtoEmoji}>{item.emoji || '📦'}</Text>
+        </View>
+      )}
       <View style={styles.produtoInfo}>
         <Text style={styles.produtoNome} numberOfLines={1}>{item.nome}</Text>
         <Text style={styles.produtoQtd}>{item.quantidade} {item.unidade}</Text>
       </View>
       <BadgeStatus status={status} />
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -108,23 +102,22 @@ function ProdutoItem({ item }: ProdutoItemProps) {
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const { produtos } = useProducts();
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
-  const [produtos, setProdutos] = useState(PRODUTOS_MOCK);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setTimeout(() => {
-      // Em produção aqui viria um fetch real
-      setProdutos([...PRODUTOS_MOCK]);
       setRefreshing(false);
-    }, 1200);
+    }, 800);
   }, []);
 
   const alertas = produtos.filter(
     (p) => getStatusEstoque(p) === 'baixo' || getStatusEstoque(p) === 'sem_estoque'
   );
-  const valorTotal = calcularValorTotal(produtos);
-  const categorias = getCategoriasUnicas(produtos);
+  const valorTotal = produtos.reduce((acc, p) => acc + p.quantidade * p.preco, 0);
+  const categorias = new Set(produtos.map((p) => p.categoria)).size;
 
   const cards: CardResumoItemProps[] = [
     { label: 'Produtos', valor: produtos.length, emoji: '📦', bg: colors.primarySubtle },
@@ -132,7 +125,7 @@ export default function HomeScreen() {
     { label: 'Categorias', valor: categorias, emoji: '🗂️', bg: colors.surfaceAlt },
     {
       label: 'Valor',
-      valor: `R$${valorTotal.toFixed(0)}`,
+      valor: `R$${valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
       emoji: '💰',
       bg: colors.successLight,
     },
@@ -147,7 +140,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.saudacao}>
-            {getSaudacao()}, {user?.nome || 'Usuário'} {getEmoji()}
+            {getSaudacao()}, {user?.nome || 'Usuário'}
           </Text>
           <Text style={styles.subtitulo}>Visão geral do estoque</Text>
         </View>
@@ -168,15 +161,23 @@ export default function HomeScreen() {
         <View style={styles.alertaBox}>
           <Text style={styles.alertaTitulo}>⚠️ Estoque crítico ({alertas.length})</Text>
           {alertas.slice(0, 3).map((p) => (
-            <View key={p.id} style={styles.alertaItem}>
+            <TouchableOpacity
+              key={p.id}
+              style={styles.alertaItem}
+              onPress={() => router.push({ pathname: '/produtos/[id]' as any, params: { id: p.id } })}
+              activeOpacity={0.7}
+            >
               <Text style={styles.alertaNome} numberOfLines={1}>{p.nome}</Text>
               <Text style={styles.alertaQtd}>
                 {p.quantidade}/{p.estoqueMinimo}
               </Text>
-            </View>
+            </TouchableOpacity>
           ))}
           {alertas.length > 3 && (
-            <TouchableOpacity activeOpacity={0.7}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push('/produtos')}
+            >
               <Text style={styles.verTodos}>Ver todos →</Text>
             </TouchableOpacity>
           )}
@@ -194,7 +195,12 @@ export default function HomeScreen() {
       <FlatList
         data={produtos}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ProdutoItem item={item} />}
+        renderItem={({ item }) => (
+          <ProdutoItem
+            item={item}
+            onPress={() => router.push({ pathname: '/produtos/[id]' as any, params: { id: item.id } })}
+          />
+        )}
         ListHeaderComponent={ListHeader}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
@@ -360,9 +366,24 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     ...shadows.sm,
   },
+  produtoThumbnail: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    marginRight: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+  },
+  emojiContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    marginRight: spacing.md,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   produtoEmoji: {
     fontSize: 26,
-    marginRight: spacing.md,
   },
   produtoInfo: {
     flex: 1,

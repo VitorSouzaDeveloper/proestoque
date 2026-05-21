@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
+import { ProductsProvider } from '@/src/contexts/ProductsContext';
 import { SplashScreen } from '@/src/components/SplashScreen';
 
 // ─────────────────────────────────────────────
@@ -43,8 +44,10 @@ function NavigationGuard() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <NavigationGuard />
-      <StatusBar style="dark" />
+      <ProductsProvider>
+        <NavigationGuard />
+        <StatusBar style="dark" />
+      </ProductsProvider>
     </AuthProvider>
   );
 }

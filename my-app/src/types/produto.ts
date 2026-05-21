@@ -13,4 +13,5 @@ export interface Produto {
   unidade: string; // ex: "un", "cx", "kg", "L"
   preco: number;   // preço unitário em R$
   emoji: string;
+  foto?: string;
 }
