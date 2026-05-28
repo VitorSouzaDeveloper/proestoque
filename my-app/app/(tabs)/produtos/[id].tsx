@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, Alert } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useProducts } from '@/src/contexts/ProductsContext';
 import { FormProduto } from '@/src/components/FormProduto';
 import { Button } from '@/src/components/Button';
@@ -8,9 +8,36 @@ import { colors, typography, spacing } from '@/src/constants/theme';
 
 export default function EditarProdutoScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { produtos, editarProduto, excluirProduto } = useProducts();
   const [loading, setLoading] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!isDirty) {
+        return;
+      }
+
+      e.preventDefault();
+
+      Alert.alert(
+        'Descartar alterações?',
+        'Você tem alterações não salvas. Deseja realmente sair e descartá-las?',
+        [
+          { text: 'Não', style: 'cancel', onPress: () => {} },
+          {
+            text: 'Descartar',
+            style: 'destructive',
+            onPress: () => navigation.dispatch(e.data.action),
+          },
+        ]
+      );
+    });
+
+    return unsubscribe;
+  }, [navigation, isDirty]);
 
   // Encontra o produto correspondente ao ID
   const produto = produtos.find((p) => p.id === id);
@@ -28,7 +55,10 @@ export default function EditarProdutoScreen() {
     setLoading(true);
     try {
       editarProduto(produto.id, data);
-      router.back();
+      setIsDirty(false); // Reset dirty so it doesn't prompt when navigating back after save
+      setTimeout(() => {
+        router.back();
+      }, 0);
     } catch (error) {
       console.error('Erro ao editar produto:', error);
       Alert.alert('Erro', 'Ocorreu um erro ao atualizar o produto.');
@@ -62,7 +92,14 @@ export default function EditarProdutoScreen() {
         onSubmit={handleSubmit}
         loading={loading}
         submitButtonText="Salvar Alterações"
+        onDirtyChange={setIsDirty}
       >
+        <Button
+          title="Voltar"
+          onPress={() => router.back()}
+          style={styles.voltarBtn}
+          textStyle={styles.voltarBtnText}
+        />
         <Button
           title="Excluir Produto"
           onPress={handleDeleteConfirm}
@@ -106,5 +143,14 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: {
     color: colors.error,
+  },
+  voltarBtn: {
+    backgroundColor: colors.surfaceAlt,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  voltarBtnText: {
+    color: colors.textPrimary,
   },
 });

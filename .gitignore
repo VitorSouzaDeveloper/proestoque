@@ -1,0 +1,87 @@
+# =========================
+# Node.js & Dependências
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+
+# =========================
+# Arquivos de Ambiente (Sec)
+# =========================
+.env
+.env.*
+!.env.example
+*.pem
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# =========================
+# Banco de Dados (SQLite)
+# =========================
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# =========================
+# Expo & React Native (my-app)
+# =========================
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.kotlin/
+.metro-health-check*
+*.tsbuildinfo
+/my-app/ios/
+/my-app/android/
+/my-app/.vscode/
+/my-app/node_modules/
+/my-app/.expo/
+/my-app/dist/
+/my-app/web-build/
+/my-app/expo-env.d.ts
+/my-app/.kotlin/
+/my-app/*.orig.*
+/my-app/*.jks
+/my-app/*.p8
+/my-app/*.p12
+/my-app/*.key
+/my-app/*.mobileprovision
+/my-app/.metro-health-check*
+/my-app/npm-debug.*
+/my-app/yarn-debug.*
+/my-app/yarn-error.*
+/my-app/.DS_Store
+/my-app/*.pem
+/my-app/.env*.local
+/my-app/*.tsbuildinfo
+/my-app/app-example
+/my-app/ios/
+/my-app/android/
+
+# =========================
+# Backend (proestoque-api)
+# =========================
+/proestoque-api/dist/
+/proestoque-api/src/generated/prisma
+/proestoque-api/node_modules
+/proestoque-api/.env
+/proestoque-api/*.db
+/proestoque-api/*.db-journal
+/proestoque-api/dist/
+
+# =========================
+# OS & Editores
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.orig.*
+.claude/

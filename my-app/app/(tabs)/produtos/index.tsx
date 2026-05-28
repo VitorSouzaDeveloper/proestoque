@@ -110,13 +110,6 @@ export default function ProdutosScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.titulo}>Produtos</Text>
-        <TouchableOpacity
-          style={styles.addBtnHeader}
-          onPress={handleNavigateToNew}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={24} color={colors.textOnPrimary} />
-        </TouchableOpacity>
       </View>
 
       {/* Campo de busca */}

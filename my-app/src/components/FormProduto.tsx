@@ -14,6 +14,7 @@ interface FormProdutoProps {
   submitButtonText?: string;
   loading?: boolean;
   children?: React.ReactNode;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 const CATEGORIES = ['Bebidas', 'Alimentos', 'Limpeza', 'Higiene', 'Eletrônicos', 'Outros'] as const;
@@ -26,12 +27,13 @@ export function FormProduto({
   submitButtonText = 'Salvar Produto',
   loading = false,
   children,
+  onDirtyChange,
 }: FormProdutoProps) {
   const {
     control,
     handleSubmit,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<ProdutoFormData>({
     resolver: zodResolver(produtoSchema),
     defaultValues: {
@@ -46,6 +48,12 @@ export function FormProduto({
       ...initialValues,
     },
   });
+
+  React.useEffect(() => {
+    if (onDirtyChange) {
+      onDirtyChange(isDirty);
+    }
+  }, [isDirty, onDirtyChange]);
 
   return (
     <ScrollView
