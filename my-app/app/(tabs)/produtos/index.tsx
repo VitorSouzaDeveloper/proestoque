@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,16 @@ import {
   SafeAreaView,
   ScrollView,
   Image,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors, typography, spacing, borderRadius, shadows } from '@/src/constants/theme';
 import { useProducts } from '@/src/contexts/ProductsContext';
-import { Categoria, Produto, StatusEstoque, getStatusEstoque } from '@/src/data/mockData';
-import { CATEGORIAS } from '@/src/data/mockData';
+import { useCategorias } from '@/src/hooks/useCategorias';
+import { Produto, StatusEstoque} from '@/src/types/produto';
+import { LoadingView } from '@/src/components/LoadingView';
+import { ErrorView } from '@/src/components/ErrorView';
 
 // ─────────────────────────────────────────────
 // Badge de status
@@ -44,14 +47,19 @@ interface ProdutoItemProps {
 }
 
 function ProdutoItem({ item, onPress }: ProdutoItemProps) {
-  const status = getStatusEstoque(item);
+  // Simulando status já que foi movido pra API ou mantendo a lógica se possível
+  const status = (item as any).quantidade === 0 ? 'sem_estoque' : ((item as any).quantidade < (item as any).quantidadeMinima ? 'baixo' : 'normal');
   return (
     <TouchableOpacity style={styles.produtoItem} onPress={onPress} activeOpacity={0.7}>
       {item.foto ? (
         <Image source={{ uri: item.foto }} style={styles.produtoThumbnail} />
+      ) : item.emoji ? (
+        <View style={[styles.emojiContainer, { backgroundColor: item.categoria?.cor || colors.surfaceAlt }]}>
+          <Text style={styles.produtoEmoji}>{item.emoji}</Text>
+        </View>
       ) : (
         <View style={styles.emojiContainer}>
-          <Text style={styles.produtoEmoji}>{item.emoji || '📦'}</Text>
+          <Text style={styles.produtoEmoji}>📦</Text>
         </View>
       )}
       <View style={styles.produtoInfo}>
@@ -68,26 +76,26 @@ function ProdutoItem({ item, onPress }: ProdutoItemProps) {
 // ─────────────────────────────────────────────
 // Tela Produtos
 // ─────────────────────────────────────────────
-type CategoriaFiltro = 'Todos' | Categoria;
 
 export default function ProdutosScreen() {
   const router = useRouter();
-  const { produtos } = useProducts();
+  
+  const { produtos, isLoading: loadingProdutos, error: errorProdutos, carregarProdutos } = useProducts();
+  const { categorias, isLoading: loadingCategorias, error: errorCategorias } = useCategorias();
+  
   const [busca, setBusca] = useState('');
-  const [categoriaAtiva, setCategoriaAtiva] = useState<CategoriaFiltro>('Todos');
+  const [categoriaAtiva, setCategoriaAtiva] = useState<string>('Todos');
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Categorias que de fato existem nos dados atuais
-  const categoriasDisponiveis: CategoriaFiltro[] = useMemo(() => {
-    const existentes = new Set(produtos.map((p) => p.categoria));
-    return ['Todos', ...CATEGORIAS.filter((c) => existentes.has(c))];
-  }, [produtos]);
+  const categoriasDisponiveis = useMemo(() => {
+    return [{ id: 'Todos', nome: 'Todos' }, ...categorias];
+  }, [categorias]);
 
-  // Filtro com useMemo
   const produtosFiltrados = useMemo(() => {
     return produtos.filter((p) => {
       const matchBusca = p.nome.toLowerCase().includes(busca.toLowerCase());
       const matchCategoria =
-        categoriaAtiva === 'Todos' || p.categoria === categoriaAtiva;
+        categoriaAtiva === 'Todos' || p.categoriaId === categoriaAtiva;
       return matchBusca && matchCategoria;
     });
   }, [produtos, busca, categoriaAtiva]);
@@ -102,6 +110,20 @@ export default function ProdutosScreen() {
       params: { id },
     });
   };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await carregarProdutos();
+    setRefreshing(false);
+  }, [carregarProdutos]);
+
+  if (loadingProdutos && produtos.length === 0) {
+    return <LoadingView mensagem="Carregando produtos..." />;
+  }
+
+  if (errorProdutos && produtos.length === 0) {
+    return <ErrorView mensagem={errorProdutos} onRetry={carregarProdutos} />;
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -135,16 +157,16 @@ export default function ProdutosScreen() {
         style={styles.chipsScroll}
       >
         {categoriasDisponiveis.map((cat) => {
-          const ativo = cat === categoriaAtiva;
+          const ativo = cat.id === categoriaAtiva;
           return (
             <TouchableOpacity
-              key={cat}
+              key={cat.id}
               style={[styles.chip, ativo && styles.chipAtivo]}
-              onPress={() => setCategoriaAtiva(cat)}
+              onPress={() => setCategoriaAtiva(cat.id)}
               activeOpacity={0.75}
             >
               <Text style={[styles.chipText, ativo && styles.chipTextoAtivo]}>
-                {cat}
+                {cat.nome}
               </Text>
             </TouchableOpacity>
           );
@@ -155,6 +177,9 @@ export default function ProdutosScreen() {
       <FlatList
         data={produtosFiltrados}
         keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         renderItem={({ item }) => (
           <ProdutoItem item={item} onPress={() => handleNavigateToEdit(item.id)} />
         )}
@@ -207,15 +232,6 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
     color: colors.textPrimary,
-  },
-  addBtnHeader: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.sm,
   },
 
   // Search

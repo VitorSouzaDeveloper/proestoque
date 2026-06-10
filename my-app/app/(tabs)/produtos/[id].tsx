@@ -51,17 +51,18 @@ export default function EditarProdutoScreen() {
     );
   }
 
-  const handleSubmit = (data: any) => {
+  const handleSubmit = async (data: any) => {
     setLoading(true);
     try {
-      editarProduto(produto.id, data);
+      await editarProduto(produto.id, data);
       setIsDirty(false); // Reset dirty so it doesn't prompt when navigating back after save
+      Alert.alert('Sucesso', 'Produto atualizado com sucesso!');
       setTimeout(() => {
         router.back();
       }, 0);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao editar produto:', error);
-      Alert.alert('Erro', 'Ocorreu um erro ao atualizar o produto.');
+      Alert.alert('Erro', error.message || 'Ocorreu um erro ao atualizar o produto.');
     } finally {
       setLoading(false);
     }
@@ -76,9 +77,13 @@ export default function EditarProdutoScreen() {
         {
           text: 'Excluir',
           style: 'destructive',
-          onPress: () => {
-            excluirProduto(produto.id);
-            router.back();
+          onPress: async () => {
+            try {
+              await excluirProduto(produto.id);
+              router.back();
+            } catch (error: any) {
+              Alert.alert('Erro', error.message || 'Ocorreu um erro ao excluir o produto.');
+            }
           },
         },
       ]
@@ -105,6 +110,12 @@ export default function EditarProdutoScreen() {
           onPress={handleDeleteConfirm}
           style={styles.deleteBtn}
           textStyle={styles.deleteBtnText}
+        />
+        <Button
+          title="Movimentações de Estoque"
+          onPress={() => router.push(`/produtos/movimentacoes?id=${produto.id}` as any)}
+          style={styles.movimentacoesBtn}
+          textStyle={styles.movimentacoesBtnText}
         />
       </FormProduto>
     </View>
@@ -152,5 +163,14 @@ const styles = StyleSheet.create({
   },
   voltarBtnText: {
     color: colors.textPrimary,
+  },
+  movimentacoesBtn: {
+    backgroundColor: colors.surfaceAlt,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  movimentacoesBtnText: {
+    color: colors.primary,
   },
 });

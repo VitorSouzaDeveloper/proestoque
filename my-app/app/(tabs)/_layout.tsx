@@ -46,6 +46,7 @@ export default function TabLayout() {
         name="produtos"
         options={{
           title: 'Produtos',
+          href: '/produtos',
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="cube-outline" color={color} size={size} />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useProducts } from '@/src/contexts/ProductsContext';
 import { FormProduto } from '@/src/components/FormProduto';
@@ -10,13 +10,15 @@ export default function NovoProdutoScreen() {
   const { adicionarProduto } = useProducts();
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (data: any) => {
+  const handleSubmit = async (data: any) => {
     setLoading(true);
     try {
-      adicionarProduto(data);
+      await adicionarProduto(data);
+      Alert.alert('Sucesso', 'Produto cadastrado com sucesso!');
       router.back();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao cadastrar produto:', error);
+      Alert.alert('Erro', error.message || 'Erro ao cadastrar produto');
     } finally {
       setLoading(false);
     }

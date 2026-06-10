@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -40,10 +41,10 @@ export default function CadastroScreen() {
     setLoading(true);
     try {
       await registrar(nome, email, senha);
-      router.replace('/(tabs)/index' as never);
-    } catch (error) {
+      // O NavigationGuard no _layout.tsx cuidará do redirecionamento
+    } catch (error: any) {
       console.error(error);
-      setSenhaError('Erro ao criar conta');
+      Alert.alert('Erro ao criar conta', error.message || 'Erro inesperado');
     } finally {
       setLoading(false);
     }

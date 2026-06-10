@@ -7,6 +7,7 @@ import { Input } from './Input';
 import { Button } from './Button';
 import { ImagePickerField } from './ImagePickerField';
 import { colors, typography, spacing, borderRadius } from '../constants/theme';
+import { useCategorias } from '../hooks/useCategorias';
 
 interface FormProdutoProps {
   initialValues?: Partial<ProdutoFormData>;
@@ -17,7 +18,6 @@ interface FormProdutoProps {
   onDirtyChange?: (isDirty: boolean) => void;
 }
 
-const CATEGORIES = ['Bebidas', 'Alimentos', 'Limpeza', 'Higiene', 'Eletrônicos', 'Outros'] as const;
 const QUICK_UNIDADES = ['un', 'cx', 'kg', 'L', 'pct'];
 const QUICK_EMOJIS = ['📦', '☕', '💧', '🍚', '🧺', '🧴', '🔌', '🍏', '🍕'];
 
@@ -29,6 +29,8 @@ export function FormProduto({
   children,
   onDirtyChange,
 }: FormProdutoProps) {
+  const { categorias } = useCategorias();
+  
   const {
     control,
     handleSubmit,
@@ -38,9 +40,9 @@ export function FormProduto({
     resolver: zodResolver(produtoSchema),
     defaultValues: {
       nome: '',
-      categoria: 'Outros',
+      categoriaId: '',
       quantidade: 0,
-      estoqueMinimo: 0,
+      quantidadeMinima: 0,
       unidade: 'un',
       preco: 0,
       emoji: '📦',
@@ -93,23 +95,23 @@ export function FormProduto({
 
       {/* 3. Categoria */}
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Categoria</Text>
+        <Text style={styles.sectionLabel}>Categoria *</Text>
         <Controller
           control={control}
-          name="categoria"
+          name="categoriaId"
           render={({ field: { value, onChange } }) => (
             <View>
               <View style={styles.categoriesGrid}>
-                {CATEGORIES.map((cat) => {
-                  const selected = cat === value;
+                {categorias.map((cat) => {
+                  const selected = cat.id === value;
                   return (
                     <TouchableOpacity
-                      key={cat}
+                      key={cat.id}
                       style={[
                         styles.categoryBtn,
                         selected && styles.categoryBtnSelected,
                       ]}
-                      onPress={() => onChange(cat)}
+                      onPress={() => onChange(cat.id)}
                       activeOpacity={0.7}
                     >
                       <Text
@@ -118,14 +120,14 @@ export function FormProduto({
                           selected && styles.categoryBtnTextSelected,
                         ]}
                       >
-                        {cat}
+                        {cat.nome}
                       </Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
-              {errors.categoria && (
-                <Text style={styles.errorTextInline}>{errors.categoria.message}</Text>
+              {errors.categoriaId && (
+                <Text style={styles.errorTextInline}>{errors.categoriaId.message}</Text>
               )}
             </View>
           )}
@@ -174,16 +176,18 @@ export function FormProduto({
         <View style={styles.col}>
           <Controller
             control={control}
-            name="estoqueMinimo"
-            render={({ field: { onChange, onBlur, value } }) => (
+            name="quantidadeMinima"
+            render={({ field: { value, onChange } }) => (
               <Input
                 label="Estoque Mínimo"
                 placeholder="0"
-                keyboardType="number-pad"
-                onBlur={onBlur}
-                onChangeText={(text) => onChange(text === '' ? 0 : Number(text))}
-                value={value === 0 ? '0' : String(value)}
-                error={errors.estoqueMinimo?.message}
+                keyboardType="numeric"
+                value={value !== undefined ? String(value) : ''}
+                onChangeText={(text) => {
+                  const num = parseInt(text.replace(/\D/g, ''), 10);
+                  onChange(isNaN(num) ? 0 : num);
+                }}
+                error={errors.quantidadeMinima?.message}
                 icon="alert-circle-outline"
               />
             )}
@@ -238,7 +242,7 @@ export function FormProduto({
                 placeholder="Ex: 📦"
                 onBlur={onBlur}
                 onChangeText={onChange}
-                value={value}
+                value={value || ''}
                 error={errors.emoji?.message}
                 icon="happy-outline"
                 maxLength={2}

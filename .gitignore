@@ -84,4 +84,4 @@ Thumbs.db
 .vscode/
 .idea/
 *.orig.*
-.claude/
+.claude/*

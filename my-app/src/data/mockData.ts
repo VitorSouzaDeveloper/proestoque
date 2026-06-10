@@ -12,7 +12,7 @@ export type { StatusEstoque, Categoria, Produto, CardResumo, Usuario };
 
 export function getStatusEstoque(produto: Produto): StatusEstoque {
   if (produto.quantidade === 0) return 'sem_estoque';
-  if (produto.quantidade <= produto.estoqueMinimo) return 'baixo';
+  if (produto.quantidade <= produto.quantidadeMinima) return 'baixo';
   return 'normal';
 }
 
@@ -26,7 +26,7 @@ export const PRODUTOS_MOCK: Produto[] = [
     nome: 'Café Especial 250g',
     categoria: 'Bebidas',
     quantidade: 4,
-    estoqueMinimo: 10,
+    quantidadeMinima: 10,
     unidade: 'un',
     preco: 28.9,
     emoji: '☕',
@@ -36,7 +36,7 @@ export const PRODUTOS_MOCK: Produto[] = [
     nome: 'Água Mineral 600ml',
     categoria: 'Bebidas',
     quantidade: 48,
-    estoqueMinimo: 20,
+    quantidadeMinima: 20,
     unidade: 'un',
     preco: 2.5,
     emoji: '💧',
@@ -46,7 +46,7 @@ export const PRODUTOS_MOCK: Produto[] = [
     nome: 'Suco de Laranja',
     categoria: 'Bebidas',
     quantidade: 8,
-    estoqueMinimo: 12,
+    quantidadeMinima: 12,
     unidade: 'un',
     preco: 7.9,
     emoji: '🍊',
@@ -56,7 +56,7 @@ export const PRODUTOS_MOCK: Produto[] = [
     nome: 'Arroz Branco 5kg',
     categoria: 'Alimentos',
     quantidade: 15,
-    estoqueMinimo: 10,
+    quantidadeMinima: 10,
     unidade: 'cx',
     preco: 24.5,
     emoji: '🍚',
@@ -66,7 +66,7 @@ export const PRODUTOS_MOCK: Produto[] = [
     nome: 'Feijão Carioca',
     categoria: 'Alimentos',
     quantidade: 3,
-    estoqueMinimo: 8,
+    quantidadeMinima: 8,
     unidade: 'cx',
     preco: 9.9,
     emoji: '🫘',
@@ -76,7 +76,7 @@ export const PRODUTOS_MOCK: Produto[] = [
     nome: 'Canela Caligráfica',
     categoria: 'Alimentos',
     quantidade: 1,
-    estoqueMinimo: 5,
+    quantidadeMinima: 5,
     unidade: 'un',
     preco: 5.5,
     emoji: '🌿',
@@ -86,7 +86,7 @@ export const PRODUTOS_MOCK: Produto[] = [
     nome: 'Sabão em Pó 3kg',
     categoria: 'Limpeza',
     quantidade: 0,
-    estoqueMinimo: 4,
+    quantidadeMinima: 4,
     unidade: 'un',
     preco: 19.9,
     emoji: '🧺',
@@ -96,7 +96,7 @@ export const PRODUTOS_MOCK: Produto[] = [
     nome: 'Detergente 500ml',
     categoria: 'Limpeza',
     quantidade: 12,
-    estoqueMinimo: 8,
+    quantidadeMinima: 8,
     unidade: 'un',
     preco: 3.2,
     emoji: '🫧',
@@ -106,7 +106,7 @@ export const PRODUTOS_MOCK: Produto[] = [
     nome: 'Shampoo 350ml',
     categoria: 'Higiene',
     quantidade: 2,
-    estoqueMinimo: 6,
+    quantidadeMinima: 6,
     unidade: 'un',
     preco: 14.9,
     emoji: '🧴',
@@ -116,7 +116,7 @@ export const PRODUTOS_MOCK: Produto[] = [
     nome: 'Papel Higiênico 12un',
     categoria: 'Higiene',
     quantidade: 20,
-    estoqueMinimo: 10,
+    quantidadeMinima: 10,
     unidade: 'pct',
     preco: 18.0,
     emoji: '🧻',

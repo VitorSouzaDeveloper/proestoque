@@ -73,6 +73,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadStoredAuth();
   }, []);
 
+  // Intercepta erros 401 globalmente para deslogar o usuário e forçar o redirecionamento
+  useEffect(() => {
+    const interceptor = api.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response?.status === 401) {
+          await logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      api.interceptors.response.eject(interceptor);
+    };
+  }, []);
+
   async function registrar(nome: string, email: string, senha: string) {
     setIsLoading(true);
 

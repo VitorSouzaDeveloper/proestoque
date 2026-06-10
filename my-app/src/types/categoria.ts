@@ -1,9 +1,8 @@
 // ProEstoque — Tipo: Categoria
 
-export type Categoria =
-  | 'Bebidas'
-  | 'Alimentos'
-  | 'Limpeza'
-  | 'Higiene'
-  | 'Eletrônicos'
-  | 'Outros';
+export interface Categoria {
+  id: string;
+  nome: string;
+  icone?: string;
+  cor?: string;
+}

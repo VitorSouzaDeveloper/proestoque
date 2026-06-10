@@ -27,7 +27,7 @@ class ProdutoController {
   }
 
   async criar(req: Request, res: Response) {
-    const { nome, quantidade, categoriaId, quantidadeMinima, preco, unidade } = req.body;
+    const { nome, quantidade, categoriaId, quantidadeMinima, preco, unidade, foto, emoji } = req.body;
 
     if (!nome || !categoriaId) {
       throw new AppError('Nome e categoria são obrigatórios', 400);
@@ -45,6 +45,8 @@ class ProdutoController {
         quantidadeMinima: quantidadeMinima || 0,
         preco: preco || 0,
         unidade: unidade || 'un',
+        foto,
+        emoji,
         categoriaId
       },
       include: { categoria: true }
@@ -55,7 +57,7 @@ class ProdutoController {
 
   async atualizar(req: Request, res: Response) {
     const id = req.params.id as string;
-    const { nome, quantidade, categoriaId, quantidadeMinima, preco, unidade } = req.body;
+    const { nome, quantidade, categoriaId, quantidadeMinima, preco, unidade, foto, emoji } = req.body;
 
     const produtoExiste = await prisma.produto.findUnique({ where: { id } });
     if (!produtoExiste) {
@@ -71,7 +73,7 @@ class ProdutoController {
 
     const produto = await prisma.produto.update({
       where: { id },
-      data: { nome, quantidade, categoriaId, quantidadeMinima, preco, unidade },
+      data: { nome, quantidade, categoriaId, quantidadeMinima, preco, unidade, foto, emoji },
       include: { categoria: true }
     });
 

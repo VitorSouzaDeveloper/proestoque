@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,14 @@ import {
   TouchableOpacity,
   StatusBar,
   SafeAreaView,
+  Image,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius, shadows } from '@/src/constants/theme';
-import {
-  Produto,
-  getStatusEstoque,
-  StatusEstoque,
-} from '@/src/data/mockData';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useProducts } from '@/src/contexts/ProductsContext';
 import { useRouter } from 'expo-router';
-import { Image } from 'react-native';
+import { LoadingView } from '@/src/components/LoadingView';
+import { ErrorView } from '@/src/components/ErrorView';
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -32,16 +28,22 @@ function getSaudacao(): string {
   return 'Boa noite';
 }
 
+function getStatusEstoque(produto: any): 'normal' | 'baixo' | 'sem_estoque' {
+  if (produto.quantidade === 0) return 'sem_estoque';
+  if (produto.quantidade < produto.quantidadeMinima) return 'baixo';
+  return 'normal';
+}
+
 // ─────────────────────────────────────────────
 // Sub-componentes
 // ─────────────────────────────────────────────
 
 interface BadgeStatusProps {
-  status: StatusEstoque;
+  status: 'normal' | 'baixo' | 'sem_estoque';
 }
 
 function BadgeStatus({ status }: BadgeStatusProps) {
-  const config: Record<StatusEstoque, { label: string; bg: string; text: string }> = {
+  const config = {
     normal: { label: 'Normal', bg: colors.successLight, text: colors.success },
     baixo: { label: 'Baixo', bg: colors.warningLight, text: colors.warning },
     sem_estoque: { label: 'Sem estoque', bg: colors.errorLight, text: colors.error },
@@ -72,7 +74,7 @@ function CardResumoItem({ label, valor, emoji, bg }: CardResumoItemProps) {
 }
 
 interface ProdutoItemProps {
-  item: Produto;
+  item: any;
   onPress: () => void;
 }
 
@@ -82,9 +84,13 @@ function ProdutoItem({ item, onPress }: ProdutoItemProps) {
     <TouchableOpacity style={styles.produtoItem} onPress={onPress} activeOpacity={0.7}>
       {item.foto ? (
         <Image source={{ uri: item.foto }} style={styles.produtoThumbnail} />
+      ) : item.emoji ? (
+        <View style={[styles.emojiContainer, { backgroundColor: item.categoria?.cor || colors.surfaceAlt }]}>
+          <Text style={styles.produtoEmoji}>{item.emoji}</Text>
+        </View>
       ) : (
         <View style={styles.emojiContainer}>
-          <Text style={styles.produtoEmoji}>{item.emoji || '📦'}</Text>
+          <Text style={styles.produtoEmoji}>📦</Text>
         </View>
       )}
       <View style={styles.produtoInfo}>
@@ -102,45 +108,56 @@ function ProdutoItem({ item, onPress }: ProdutoItemProps) {
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const { produtos } = useProducts();
+  const { produtos, isLoading, error, carregarProdutos } = useProducts();
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 800);
-  }, []);
+    await carregarProdutos();
+    setRefreshing(false);
+  }, [carregarProdutos]);
 
-  const alertas = produtos.filter(
-    (p) => getStatusEstoque(p) === 'baixo' || getStatusEstoque(p) === 'sem_estoque'
-  );
-  const valorTotal = produtos.reduce((acc, p) => acc + p.quantidade * p.preco, 0);
-  const categorias = new Set(produtos.map((p) => p.categoria)).size;
+  const alertas = useMemo(() => {
+    return produtos.filter(p => p.quantidade < p.quantidadeMinima);
+  }, [produtos]);
+
+  const valorTotalEstoque = useMemo(() => {
+    return produtos.reduce((acc, p) => acc + p.quantidade * p.preco, 0);
+  }, [produtos]);
+
+  const totalCategorias = useMemo(() => {
+    return new Set(produtos.map(p => p.categoriaId)).size;
+  }, [produtos]);
+
+  if (isLoading && produtos.length === 0) {
+    return <LoadingView mensagem="Carregando painel..." />;
+  }
+
+  if (error && produtos.length === 0) {
+    return <ErrorView mensagem={error} onRetry={carregarProdutos} />;
+  }
 
   const cards: CardResumoItemProps[] = [
     { label: 'Produtos', valor: produtos.length, emoji: '📦', bg: colors.primarySubtle },
     { label: 'Alertas', valor: alertas.length, emoji: '⚠️', bg: colors.warningLight },
-    { label: 'Categorias', valor: categorias, emoji: '🗂️', bg: colors.surfaceAlt },
+    { label: 'Categorias', valor: totalCategorias, emoji: '🗂️', bg: colors.surfaceAlt },
     {
       label: 'Valor',
-      valor: `R$${valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+      valor: `R$${valorTotalEstoque.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
       emoji: '💰',
       bg: colors.successLight,
     },
   ];
 
-  // Inicial do nome para o avatar
   const inicial = user?.nome?.charAt(0).toUpperCase() || '?';
 
   const ListHeader = (
     <View>
-      {/* Saudação + Avatar */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.saudacao}>
-            {getSaudacao()}, {user?.nome || 'Usuário'}
+            {getSaudacao()}, {user?.nome?.split(' ')[0] || 'Usuário'}
           </Text>
           <Text style={styles.subtitulo}>Visão geral do estoque</Text>
         </View>
@@ -149,14 +166,12 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Cards de resumo */}
       <View style={styles.cardsGrid}>
         {cards.map((c) => (
           <CardResumoItem key={c.label} {...c} />
         ))}
       </View>
 
-      {/* Alertas de estoque crítico — somente se houver */}
       {alertas.length > 0 && (
         <View style={styles.alertaBox}>
           <Text style={styles.alertaTitulo}>⚠️ Estoque crítico ({alertas.length})</Text>
@@ -169,22 +184,18 @@ export default function HomeScreen() {
             >
               <Text style={styles.alertaNome} numberOfLines={1}>{p.nome}</Text>
               <Text style={styles.alertaQtd}>
-                {p.quantidade}/{p.estoqueMinimo}
+                {p.quantidade}/{p.quantidadeMinima}
               </Text>
             </TouchableOpacity>
           ))}
           {alertas.length > 3 && (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => router.push('/produtos')}
-            >
+            <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/produtos')}>
               <Text style={styles.verTodos}>Ver todos →</Text>
             </TouchableOpacity>
           )}
         </View>
       )}
 
-      {/* Título da lista */}
       <Text style={styles.secaoTitulo}>Produtos recentes</Text>
     </View>
   );
@@ -220,201 +231,35 @@ export default function HomeScreen() {
   );
 }
 
-// ─────────────────────────────────────────────
-// Estilos
-// ─────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  listContent: {
-    paddingBottom: spacing['2xl'],
-  },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.surface,
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  saudacao: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-  },
-  subtitulo: {
-    fontSize: typography.fontSize.sm,
-    color: colors.primary,
-    fontWeight: typography.fontWeight.semiBold,
-    marginTop: 4,
-  },
-
-  // Avatar
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: spacing.md,
-    ...shadows.md,
-  },
-  avatarText: {
-    color: colors.textOnPrimary,
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
-  },
-
-  // Cards grid
-  cardsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: spacing.base,
-    paddingTop: spacing.base,
-    gap: spacing.sm,
-  },
-  card: {
-    width: '47.5%',
-    borderRadius: borderRadius.lg,
-    padding: spacing.base,
-    ...shadows.sm,
-  },
-  cardEmoji: {
-    fontSize: 22,
-    marginBottom: spacing.xs,
-  },
-  cardValor: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-  },
-  cardLabel: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textSecondary,
-    marginTop: 2,
-    fontWeight: typography.fontWeight.medium,
-  },
-
-  // Alerta estoque crítico
-  alertaBox: {
-    marginHorizontal: spacing.base,
-    marginTop: spacing.base,
-    backgroundColor: colors.warningLight,
-    borderRadius: borderRadius.lg,
-    padding: spacing.base,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.warning,
-  },
-  alertaTitulo: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.warning,
-    marginBottom: spacing.sm,
-  },
-  alertaItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 3,
-  },
-  alertaNome: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  alertaQtd: {
-    fontSize: typography.fontSize.sm,
-    color: colors.warning,
-    fontWeight: typography.fontWeight.semiBold,
-    marginLeft: spacing.sm,
-  },
-  verTodos: {
-    fontSize: typography.fontSize.sm,
-    color: colors.primary,
-    fontWeight: typography.fontWeight.semiBold,
-    marginTop: spacing.sm,
-  },
-
-  // Seção título
-  secaoTitulo: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.textPrimary,
-    marginHorizontal: spacing.base,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-
-  // Produto item
-  produtoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    marginHorizontal: spacing.base,
-    marginBottom: spacing.sm,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    ...shadows.sm,
-  },
-  produtoThumbnail: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
-    marginRight: spacing.md,
-    backgroundColor: colors.surfaceAlt,
-  },
-  emojiContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
-    marginRight: spacing.md,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  produtoEmoji: {
-    fontSize: 26,
-  },
-  produtoInfo: {
-    flex: 1,
-  },
-  produtoNome: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semiBold,
-    color: colors.textPrimary,
-  },
-  produtoQtd: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-
-  // Badge de status
-  badge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: borderRadius.full,
-  },
-  badgeText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.bold,
-  },
-
-  // Empty
-  emptyText: {
-    textAlign: 'center',
-    color: colors.textMuted,
-    marginTop: spacing['2xl'],
-    fontSize: typography.fontSize.base,
-  },
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  listContent: { paddingBottom: spacing['2xl'] },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.base, paddingTop: spacing.lg, paddingBottom: spacing.md, backgroundColor: colors.surface },
+  headerLeft: { flex: 1 },
+  saudacao: { fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.bold, color: colors.textPrimary },
+  subtitulo: { fontSize: typography.fontSize.sm, color: colors.primary, fontWeight: typography.fontWeight.semiBold, marginTop: 4 },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginLeft: spacing.md, ...shadows.md },
+  avatarText: { color: colors.textOnPrimary, fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold },
+  cardsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.base, paddingTop: spacing.base, gap: spacing.sm },
+  card: { width: '47.5%', borderRadius: borderRadius.lg, padding: spacing.base, ...shadows.sm },
+  cardEmoji: { fontSize: 22, marginBottom: spacing.xs },
+  cardValor: { fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.bold, color: colors.textPrimary },
+  cardLabel: { fontSize: typography.fontSize.xs, color: colors.textSecondary, marginTop: 2, fontWeight: typography.fontWeight.medium },
+  alertaBox: { marginHorizontal: spacing.base, marginTop: spacing.base, backgroundColor: colors.warningLight, borderRadius: borderRadius.lg, padding: spacing.base, borderLeftWidth: 4, borderLeftColor: colors.warning },
+  alertaTitulo: { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.bold, color: colors.warning, marginBottom: spacing.sm },
+  alertaItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 3 },
+  alertaNome: { fontSize: typography.fontSize.sm, color: colors.textPrimary, flex: 1 },
+  alertaQtd: { fontSize: typography.fontSize.sm, color: colors.warning, fontWeight: typography.fontWeight.semiBold, marginLeft: spacing.sm },
+  verTodos: { fontSize: typography.fontSize.sm, color: colors.primary, fontWeight: typography.fontWeight.semiBold, marginTop: spacing.sm },
+  secaoTitulo: { fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.bold, color: colors.textPrimary, marginHorizontal: spacing.base, marginTop: spacing.lg, marginBottom: spacing.sm },
+  produtoItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, marginHorizontal: spacing.base, marginBottom: spacing.sm, borderRadius: borderRadius.lg, padding: spacing.md, ...shadows.sm },
+  produtoThumbnail: { width: 48, height: 48, borderRadius: borderRadius.md, marginRight: spacing.md, backgroundColor: colors.surfaceAlt },
+  emojiContainer: { width: 48, height: 48, borderRadius: borderRadius.md, marginRight: spacing.md, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  produtoEmoji: { fontSize: 26 },
+  produtoInfo: { flex: 1 },
+  produtoNome: { fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semiBold, color: colors.textPrimary },
+  produtoQtd: { fontSize: typography.fontSize.sm, color: colors.textSecondary, marginTop: 2 },
+  badge: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: borderRadius.full },
+  badgeText: { fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.bold },
+  emptyText: { textAlign: 'center', color: colors.textMuted, marginTop: spacing['2xl'], fontSize: typography.fontSize.base },
 });

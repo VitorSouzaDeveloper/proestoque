@@ -39,7 +39,7 @@ export function ImagePickerField({ value, onChange, error }: ImagePickerFieldPro
   };
 
   const removeImage = () => {
-    onChange(undefined);
+    onChange(''); // Empty string is serialized and tells the backend to clear the field
   };
 
   return (

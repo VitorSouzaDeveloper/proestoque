@@ -7,9 +7,10 @@ export type StatusEstoque = 'normal' | 'baixo' | 'sem_estoque';
 export interface Produto {
   id: string;
   nome: string;
+  categoriaId: string;
   categoria: Categoria;
   quantidade: number;
-  estoqueMinimo: number;
+  quantidadeMinima: number;
   unidade: string; // ex: "un", "cx", "kg", "L"
   preco: number;   // preço unitário em R$
   emoji: string;

@@ -1,53 +1,42 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import { api } from '../services/api';
 import { Produto } from '../types';
-import { PRODUTOS_MOCK } from '../data/mockData';
 
-// ─────────────────────────────────────────────
-// Chaves do AsyncStorage
-// ─────────────────────────────────────────────
-const STORAGE_KEYS = {
-  PRODUTOS: '@proestoque:produtos',
-};
-
-// ─────────────────────────────────────────────
-// Tipos do Estado e Ações
-// ─────────────────────────────────────────────
 type State = {
   produtos: Produto[];
   isLoading: boolean;
+  error: string | null;
 };
 
 type Action =
-  | { type: 'LOAD'; payload: Produto[] }
+  | { type: 'LOAD_START' }
+  | { type: 'LOAD_SUCCESS'; payload: Produto[] }
+  | { type: 'LOAD_ERROR'; payload: string }
   | { type: 'ADD'; payload: Produto }
   | { type: 'UPDATE'; payload: Produto }
-  | { type: 'DELETE'; payload: string }; // ID do produto
+  | { type: 'DELETE'; payload: string };
 
 interface ProductsContextType {
   produtos: Produto[];
   isLoading: boolean;
-  adicionarProduto: (produtoData: Omit<Produto, 'id'>) => void;
-  editarProduto: (id: string, produtoData: Partial<Produto>) => void;
-  excluirProduto: (id: string) => void;
+  error: string | null;
+  carregarProdutos: () => Promise<void>;
+  adicionarProduto: (produtoData: any) => Promise<void>;
+  editarProduto: (id: string, produtoData: any) => Promise<void>;
+  excluirProduto: (id: string) => Promise<void>;
+  getProdutoById: (id: string) => Produto | undefined;
 }
 
-// ─────────────────────────────────────────────
-// Reducer
-// ─────────────────────────────────────────────
 function productsReducer(state: State, action: Action): State {
   switch (action.type) {
-    case 'LOAD':
-      return {
-        ...state,
-        produtos: action.payload,
-        isLoading: false,
-      };
+    case 'LOAD_START':
+      return { ...state, isLoading: true, error: null };
+    case 'LOAD_SUCCESS':
+      return { ...state, produtos: action.payload, isLoading: false, error: null };
+    case 'LOAD_ERROR':
+      return { ...state, isLoading: false, error: action.payload };
     case 'ADD':
-      return {
-        ...state,
-        produtos: [action.payload, ...state.produtos],
-      };
+      return { ...state, produtos: [action.payload, ...state.produtos] };
     case 'UPDATE':
       return {
         ...state,
@@ -65,79 +54,46 @@ function productsReducer(state: State, action: Action): State {
   }
 }
 
-// ─────────────────────────────────────────────
-// Contexto
-// ─────────────────────────────────────────────
 const ProductsContext = createContext<ProductsContextType | null>(null);
 
-// ─────────────────────────────────────────────
-// Provider
-// ─────────────────────────────────────────────
 export function ProductsProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(productsReducer, {
     produtos: [],
     isLoading: true,
+    error: null,
   });
 
-  // Carrega produtos do AsyncStorage na inicialização
-  useEffect(() => {
-    async function loadStoredProducts() {
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEYS.PRODUTOS);
-        if (stored) {
-          dispatch({ type: 'LOAD', payload: JSON.parse(stored) });
-        } else {
-          // Se não houver produtos salvos, inicializa com os mocks e salva no disco
-          await AsyncStorage.setItem(STORAGE_KEYS.PRODUTOS, JSON.stringify(PRODUTOS_MOCK));
-          dispatch({ type: 'LOAD', payload: PRODUTOS_MOCK });
-        }
-      } catch (error) {
-        console.error('Erro ao carregar produtos do AsyncStorage:', error);
-        // Fallback para mock em caso de erro
-        dispatch({ type: 'LOAD', payload: PRODUTOS_MOCK });
-      }
+  const carregarProdutos = useCallback(async () => {
+    dispatch({ type: 'LOAD_START' });
+    try {
+      const response = await api.get('/produtos');
+      dispatch({ type: 'LOAD_SUCCESS', payload: response.data });
+    } catch (error: any) {
+      dispatch({ type: 'LOAD_ERROR', payload: error.message || 'Erro ao carregar produtos' });
     }
-
-    loadStoredProducts();
   }, []);
 
-  // Salva no AsyncStorage sempre que a lista de produtos mudar (e após o carregamento inicial)
   useEffect(() => {
-    async function saveProducts() {
-      if (state.isLoading) return;
-      try {
-        await AsyncStorage.setItem(STORAGE_KEYS.PRODUTOS, JSON.stringify(state.produtos));
-      } catch (error) {
-        console.error('Erro ao salvar produtos no AsyncStorage:', error);
-      }
-    }
+    carregarProdutos();
+  }, [carregarProdutos]);
 
-    saveProducts();
-  }, [state.produtos, state.isLoading]);
-
-  // Ações expostas pelo context
-  const adicionarProduto = (produtoData: Omit<Produto, 'id'>) => {
-    const novoProduto: Produto = {
-      ...produtoData,
-      id: Date.now().toString(), // Gera ID baseado em timestamp
-    };
-    dispatch({ type: 'ADD', payload: novoProduto });
+  const adicionarProduto = async (produtoData: any) => {
+    const response = await api.post('/produtos', produtoData);
+    dispatch({ type: 'ADD', payload: response.data });
   };
 
-  const editarProduto = (id: string, produtoData: Partial<Produto>) => {
-    const produtoExistente = state.produtos.find((p) => p.id === id);
-    if (!produtoExistente) return;
-
-    const produtoAtualizado: Produto = {
-      ...produtoExistente,
-      ...produtoData,
-      id, // Garante que o ID não mude
-    };
-    dispatch({ type: 'UPDATE', payload: produtoAtualizado });
+  const editarProduto = async (id: string, produtoData: any) => {
+    const response = await api.put(`/produtos/${id}`, produtoData);
+    dispatch({ type: 'UPDATE', payload: response.data });
   };
 
-  const excluirProduto = (id: string) => {
+  const excluirProduto = async (id: string) => {
+    await api.delete(`/produtos/${id}`);
     dispatch({ type: 'DELETE', payload: id });
+  };
+
+  const getProdutoById = (id: string) => {
+    return state.produtos.find((p) => p.id === id);
   };
 
   return (
@@ -145,9 +101,12 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
       value={{
         produtos: state.produtos,
         isLoading: state.isLoading,
+        error: state.error,
+        carregarProdutos,
         adicionarProduto,
         editarProduto,
         excluirProduto,
+        getProdutoById,
       }}
     >
       {children}
@@ -155,16 +114,10 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─────────────────────────────────────────────
-// Hook Customizado
-// ─────────────────────────────────────────────
 export function useProducts(): ProductsContextType {
   const context = useContext(ProductsContext);
   if (!context) {
-    throw new Error(
-      'useProducts() deve ser usado dentro de um <ProductsProvider>. ' +
-      'Verifique se o Provider envolve o componente no _layout.tsx.'
-    );
+    throw new Error('useProducts() deve ser usado dentro de um <ProductsProvider>.');
   }
   return context;
 }

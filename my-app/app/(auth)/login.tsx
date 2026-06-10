@@ -7,6 +7,7 @@ import {
   Platform,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -27,7 +28,12 @@ export default function LoginScreen() {
     if (!email || !senha) return;
     // Chama o login do contexto — o redirecionamento para o dashboard
     // acontece automaticamente pelo NavigationGuard
-    await login(email, senha);
+    try {
+      await login(email, senha);
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert('Erro ao entrar', error.message || 'E-mail ou senha incorretos');
+    }
   };
 
   return (
