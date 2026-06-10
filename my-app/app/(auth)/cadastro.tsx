@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/src/contexts/AuthContext';
 
 import { Ionicons } from '@expo/vector-icons';
 import { Input } from '@/src/components/Input';
@@ -26,7 +27,9 @@ export default function CadastroScreen() {
   const [senhaError, setSenhaError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleCriarConta = () => {
+  const { registrar } = useAuth();
+
+  const handleCriarConta = async () => {
     setSenhaError('');
 
     if (senha !== confirmarSenha) {
@@ -35,10 +38,15 @@ export default function CadastroScreen() {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await registrar(nome, email, senha);
       router.replace('/(tabs)/index' as never);
-    }, 2000);
+    } catch (error) {
+      console.error(error);
+      setSenhaError('Erro ao criar conta');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

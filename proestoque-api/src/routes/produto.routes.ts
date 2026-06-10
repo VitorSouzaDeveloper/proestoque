@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import produtoController from '../controllers/produto.controller';
+import { autenticar } from '../middlewares/auth';
 
 const produtoRoutes = Router();
+
+produtoRoutes.use(autenticar);
 
 produtoRoutes.get('/', produtoController.listar);
 produtoRoutes.get('/:id', produtoController.buscarPorId);

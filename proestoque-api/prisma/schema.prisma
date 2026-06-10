@@ -11,6 +11,7 @@ model Usuario {
   nome         String
   email        String   @unique
   senha        String
+  refreshToken String?
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 }

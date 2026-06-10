@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { api } from '../services/api';
 
 // ─────────────────────────────────────────────
 // Tipos
 // ─────────────────────────────────────────────
 
 export interface User {
+  id: string;
   nome: string;
   email: string;
 }
@@ -16,6 +18,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, senha: string) => Promise<void>;
+  registrar: (nome: string, email: string, senha: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -24,8 +27,9 @@ interface AuthContextType {
 // ─────────────────────────────────────────────
 
 const STORAGE_KEYS = {
-  TOKEN: '@proestoque:token',
-  USER: '@proestoque:user',
+  TOKEN: '@ProEstoque:token',
+  REFRESH_TOKEN: '@ProEstoque:refreshToken',
+  USER: '@ProEstoque:user',
 };
 
 // ─────────────────────────────────────────────
@@ -44,7 +48,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Auto-login: lê o token e user salvos no disco ao montar
-  // Tempo mínimo de 1.5s para exibir a Splash Screen
   useEffect(() => {
     async function loadStoredAuth() {
       try {
@@ -53,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const [storedToken, storedUser] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEYS.TOKEN),
           AsyncStorage.getItem(STORAGE_KEYS.USER),
-          minDelay, // garante 1.5s mínimo
+          minDelay,
         ]);
 
         if (storedToken && storedUser) {
@@ -70,28 +73,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loadStoredAuth();
   }, []);
 
-  // Login simulado — será substituído pela API real na Aula 11
-  async function login(email: string, _senha: string) {
+  async function registrar(nome: string, email: string, senha: string) {
     setIsLoading(true);
 
     try {
-      // Simula delay de rede
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      const response = await api.post('/auth/registro', { nome, email, senha });
+      const { usuario, token, refreshToken } = response.data;
 
-      // Dados simulados (mock)
-      const fakeToken = 'mock-jwt-token-proestoque-2024';
-      const fakeUser: User = {
-        nome: email.split('@')[0].replace(/^\w/, (c) => c.toUpperCase()),
-        email,
-      };
+      await AsyncStorage.multiSet([
+        [STORAGE_KEYS.TOKEN, token],
+        [STORAGE_KEYS.REFRESH_TOKEN, refreshToken],
+        [STORAGE_KEYS.USER, JSON.stringify(usuario)],
+      ]);
 
-      // Persiste no disco
-      await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, fakeToken);
-      await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(fakeUser));
+      setToken(token);
+      setUser(usuario);
+    } catch (error) {
+      console.error('Erro no registro:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-      // Atualiza o estado
-      setToken(fakeToken);
-      setUser(fakeUser);
+  async function login(email: string, senha: string) {
+    setIsLoading(true);
+
+    try {
+      const response = await api.post('/auth/login', { email, senha });
+      const { usuario, token, refreshToken } = response.data;
+
+      await AsyncStorage.multiSet([
+        [STORAGE_KEYS.TOKEN, token],
+        [STORAGE_KEYS.REFRESH_TOKEN, refreshToken],
+        [STORAGE_KEYS.USER, JSON.stringify(usuario)],
+      ]);
+
+      setToken(token);
+      setUser(usuario);
     } catch (error) {
       console.error('Erro no login:', error);
       throw error;
@@ -100,10 +119,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Logout: limpa disco e estado
   async function logout() {
     try {
-      await AsyncStorage.multiRemove([STORAGE_KEYS.TOKEN, STORAGE_KEYS.USER]);
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.TOKEN,
+        STORAGE_KEYS.REFRESH_TOKEN,
+        STORAGE_KEYS.USER,
+      ]);
       setToken(null);
       setUser(null);
     } catch (error) {
@@ -119,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAuthenticated: !!token,
         login,
+        registrar,
         logout,
       }}
     >
