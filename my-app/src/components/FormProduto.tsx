@@ -29,7 +29,7 @@ export function FormProduto({
   children,
   onDirtyChange,
 }: FormProdutoProps) {
-  const { categorias } = useCategorias();
+  const { categorias, isLoading: isLoadingCategorias } = useCategorias();
   
   const {
     control,
@@ -102,29 +102,35 @@ export function FormProduto({
           render={({ field: { value, onChange } }) => (
             <View>
               <View style={styles.categoriesGrid}>
-                {categorias.map((cat) => {
-                  const selected = cat.id === value;
-                  return (
-                    <TouchableOpacity
-                      key={cat.id}
-                      style={[
-                        styles.categoryBtn,
-                        selected && styles.categoryBtnSelected,
-                      ]}
-                      onPress={() => onChange(cat.id)}
-                      activeOpacity={0.7}
-                    >
-                      <Text
+                {categorias.length === 0 && !isLoadingCategorias ? (
+                  <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+                    Nenhuma categoria encontrada no banco de dados.
+                  </Text>
+                ) : (
+                  categorias.map((cat) => {
+                    const selected = cat.id === value;
+                    return (
+                      <TouchableOpacity
+                        key={cat.id}
                         style={[
-                          styles.categoryBtnText,
-                          selected && styles.categoryBtnTextSelected,
+                          styles.categoryBtn,
+                          selected && styles.categoryBtnSelected,
                         ]}
+                        onPress={() => onChange(cat.id)}
+                        activeOpacity={0.7}
                       >
-                        {cat.nome}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                        <Text
+                          style={[
+                            styles.categoryBtnText,
+                            selected && styles.categoryBtnTextSelected,
+                          ]}
+                        >
+                          {cat.nome}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
               </View>
               {errors.categoriaId && (
                 <Text style={styles.errorTextInline}>{errors.categoriaId.message}</Text>

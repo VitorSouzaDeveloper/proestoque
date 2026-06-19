@@ -1,7 +1,5 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
-import { Platform } from "react-native";
-
 // Configura como as notificações aparecem quando o app está aberto
 // "banner" = aparece como banner no topo + som
 Notifications.setNotificationHandler({
@@ -9,6 +7,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 

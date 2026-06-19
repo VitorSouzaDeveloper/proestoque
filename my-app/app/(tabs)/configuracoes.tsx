@@ -89,18 +89,21 @@ export default function ConfiguracoesScreen() {
             icon="notifications-outline"
             label="Notificações"
             color={colors.warning}
+            onPress={() => Alert.alert('Em breve', 'As configurações de notificações estarão disponíveis em atualizações futuras.')}
           />
           <View style={styles.menuDivider} />
           <MenuItem
             icon="color-palette-outline"
             label="Aparência"
             color={colors.secondary}
+            onPress={() => Alert.alert('Em breve', 'O modo escuro e temas personalizados estarão disponíveis em breve.')}
           />
           <View style={styles.menuDivider} />
           <MenuItem
             icon="help-circle-outline"
             label="Ajuda"
             color={colors.error}
+            onPress={() => Alert.alert('Em breve', 'A central de ajuda está em desenvolvimento.')}
           />
         </View>
 

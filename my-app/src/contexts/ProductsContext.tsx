@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect, useCallback } 
 import { api } from '../services/api';
 import { Produto } from '../types';
 import { notificarEstoqueCritico } from '../services/notifications';
+import { useAuth } from './AuthContext';
 
 type State = {
   produtos: Produto[];
@@ -79,9 +80,13 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const { isAuthenticated } = useAuth();
+
   useEffect(() => {
-    carregarProdutos();
-  }, [carregarProdutos]);
+    if (isAuthenticated) {
+      carregarProdutos();
+    }
+  }, [isAuthenticated, carregarProdutos]);
 
   const adicionarProduto = async (produtoData: any) => {
     const response = await api.post('/produtos', produtoData);
