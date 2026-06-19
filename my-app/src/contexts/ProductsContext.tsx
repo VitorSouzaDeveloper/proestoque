@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { Produto } from '../types';
+import { notificarEstoqueCritico } from '../services/notifications';
 
 type State = {
   produtos: Produto[];
@@ -68,6 +69,11 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await api.get('/produtos');
       dispatch({ type: 'LOAD_SUCCESS', payload: response.data });
+      
+      const criticos = response.data.filter((p: Produto) => p.quantidade < p.quantidadeMinima);
+      if (criticos.length > 0) {
+        notificarEstoqueCritico(criticos);
+      }
     } catch (error: any) {
       dispatch({ type: 'LOAD_ERROR', payload: error.message || 'Erro ao carregar produtos' });
     }

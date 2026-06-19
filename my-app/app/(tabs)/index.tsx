@@ -16,6 +16,7 @@ import { useProducts } from '@/src/contexts/ProductsContext';
 import { useRouter } from 'expo-router';
 import { LoadingView } from '@/src/components/LoadingView';
 import { ErrorView } from '@/src/components/ErrorView';
+import { ProdutoListaSkeleton } from '@/src/components/ProdutoSkeleton';
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -131,7 +132,12 @@ export default function HomeScreen() {
   }, [produtos]);
 
   if (isLoading && produtos.length === 0) {
-    return <LoadingView mensagem="Carregando painel..." />;
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        {ListHeader}
+        <ProdutoListaSkeleton count={5} />
+      </SafeAreaView>
+    );
   }
 
   if (error && produtos.length === 0) {
