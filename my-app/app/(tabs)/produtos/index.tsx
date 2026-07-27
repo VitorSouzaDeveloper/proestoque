@@ -20,6 +20,7 @@ import { useCategorias } from '@/src/hooks/useCategorias';
 import { Produto, StatusEstoque} from '@/src/types/produto';
 import { LoadingView } from '@/src/components/LoadingView';
 import { ErrorView } from '@/src/components/ErrorView';
+import { ProdutoListaSkeleton } from '@/src/components/ProdutoSkeleton';
 
 // ─────────────────────────────────────────────
 // Badge de status
@@ -118,7 +119,14 @@ export default function ProdutosScreen() {
   }, [carregarProdutos]);
 
   if (loadingProdutos && produtos.length === 0) {
-    return <LoadingView mensagem="Carregando produtos..." />;
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={styles.header}>
+          <Text style={styles.titulo}>Produtos</Text>
+        </View>
+        <ProdutoListaSkeleton count={7} />
+      </SafeAreaView>
+    );
   }
 
   if (errorProdutos && produtos.length === 0) {

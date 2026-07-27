@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
 import { ProductsProvider } from '@/src/contexts/ProductsContext';
 import { SplashScreen } from '@/src/components/SplashScreen';
+import { solicitarPermissaoNotificacoes, agendarVerificacaoDiaria } from '@/src/services/notifications';
 
 // ─────────────────────────────────────────────
 // NavigationGuard — redireciona com base no auth
@@ -26,6 +27,17 @@ function NavigationGuard() {
     } else if (isAuthenticated && inAuthGroup) {
       // Já logado e está na tela de auth → vai pro dashboard
       router.replace('/(tabs)');
+    }
+
+    async function configurarNotificacoes() {
+      const temPermissao = await solicitarPermissaoNotificacoes();
+      if (temPermissao) {
+        await agendarVerificacaoDiaria();
+      }
+    }
+
+    if (isAuthenticated) {
+      configurarNotificacoes();
     }
   }, [isAuthenticated, isLoading, segments]);
 
